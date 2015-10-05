@@ -122,11 +122,12 @@ void loop() {
   printStr(gps.course.isValid() ? TinyGPSPlus::cardinal(gps.course.value()) : "*** ", 6);
   Serial.println();
 
+  tft.setTextWrap(false);
   tft.setCursor(1,1);
   tft.fillRect(0,0, 128, 9, ST7735_WHITE);
   tft.setTextColor(ST7735_BLACK, ST7735_WHITE);
-  tft.print("GPS Data  ");
-  getDate(gps.date);  
+  getTime(gps.time);
+  getDate(gps.date);
   tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
   tft.setCursor(1, 10);
   tft.print("Sat: ");
@@ -151,6 +152,15 @@ void loop() {
     for (int i=len; i<4; ++i)
       tft.print(' ');
   }
+  // Draw Satellite map
+  tft.drawCircle(63, 89, 36, ST7735_WHITE);
+  tft.drawCircle(63, 89, 18, ST7735_WHITE);
+  tft.drawFastVLine(63, 53, 72, ST7735_WHITE);
+  tft.drawFastHLine(27, 89, 72, ST7735_WHITE);
+
+  // Draw demo satellites
+  tft.fillCircle(54, 80, 3, ST7735_GREEN);
+  tft.fillCircle(74, 74, 3, ST7735_YELLOW);
   smartDelay(1000);
 }
 
@@ -210,29 +220,27 @@ static void getDate(TinyGPSDate &d)
 {
   if (!d.isValid())
   {
-    Serial.print(F("********** "));
   }
   else
   {
     char sz[32];
     sprintf(sz, "%02d/%02d/%02d ", d.month(), d.day(), d.year());
-//    Serial.print(sz);
     tft.print(sz);
   }
   smartDelay(0);
 }
 
-static void printTime(TinyGPSTime &t)
+static void getTime(TinyGPSTime &t)
 {
   if (!t.isValid())
   {
-    Serial.print(F("******** "));
+    tft.print("Waiting for signal...");
   }
   else
   {
     char sz[32];
-    sprintf(sz, "%02d:%02d:%02d ", t.hour(), t.minute(), t.second());
-    Serial.print(sz);
+    sprintf(sz, "%02d:%02d:%02d  ", t.hour(), t.minute(), t.second());
+    tft.print(sz);
   }
   smartDelay(0);
 }
