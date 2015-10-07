@@ -22,8 +22,6 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_HMC5883_U.h>
 
-#define RADIUS 36
-
 #define SATX 63
 #define SATY 89
 #define SATR 36
@@ -130,23 +128,25 @@ void loop() {
 
   tft.setTextWrap(false);
   tft.setCursor(1,1);
-  tft.fillRect(0,0, 128, 9, ST7735_WHITE);
+  // Draw title bar background
+  tft.fillRect(0, 0, 128, 9, ST7735_WHITE);
   tft.setTextColor(ST7735_BLACK, ST7735_WHITE);
   getTime(gps.time);
   getDate(gps.date);
+
   tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
   tft.setCursor(1, 10);
-  tft.print("Sat: ");
-  tft.println(gps.satellites.value());
-  tft.setCursor(1, 18);
   tft.print("Lat: ");
   tft.println(gps.location.lat(), 6);
-  tft.setCursor(1, 26);
+  tft.setCursor(1, 18);
   tft.print("Lng: ");
   tft.println(gps.location.lng(), 6);
   tft.setCursor(1, 34);
   tft.print("Alt: ");
   tft.println(gps.altitude.meters(), 1);
+  tft.setCursor(1, 26);
+  tft.print("Sat: ");
+  tft.println(gps.satellites.value());
 
   if (magPresent) {
     headingCardinal = TinyGPSPlus::cardinal(headingDegrees);
@@ -158,13 +158,13 @@ void loop() {
     for (int i=len; i<4; ++i)
       tft.print(' ');
   }
+
   // Draw Satellite map
-  drawSatelliteMap(SATX, SATY, SATR);
+  drawSatelliteMap();
 
   // Demo satellites.
   // TODO: Feed actual $GPGSV data.
   //       Possibly color code satellite based on SNR.
-  // displaySatellite(
   displaySatellite(60.0, 45);
   displaySatellite(20.0, 110);
   displaySatellite(45.0, 315);
@@ -224,20 +224,6 @@ static void printInt(unsigned long val, bool valid, int len)
   smartDelay(0);
 }
 
-static void getDate(TinyGPSDate &d)
-{
-  if (!d.isValid())
-  {
-  }
-  else
-  {
-    char sz[32];
-    sprintf(sz, "%02d/%02d/%02d ", d.month(), d.day(), d.year());
-    tft.print(sz);
-  }
-  smartDelay(0);
-}
-
 static void getTime(TinyGPSTime &t)
 {
   if (!t.isValid())
@@ -253,6 +239,17 @@ static void getTime(TinyGPSTime &t)
   smartDelay(0);
 }
 
+static void getDate(TinyGPSDate &d)
+{
+  if (d.isValid())
+  {
+    char sz[32];
+    sprintf(sz, "%02d/%02d/%02d ", d.month(), d.day(), d.year());
+    tft.print(sz);
+  }
+  smartDelay(0);
+}
+
 static char printStr(const char *str, int len)
 {
   int slen = strlen(str);
@@ -260,31 +257,45 @@ static char printStr(const char *str, int len)
     Serial.print(i<slen ? str[i] : ' ');
   smartDelay(0);
 }
+
 //  tft.drawCircle(63, 89, 36, ST7735_WHITE);
 //  tft.drawCircle(63, 89, 18, ST7735_WHITE);
 //  tft.drawFastVLine(63, 53, 72, ST7735_WHITE);
 //  tft.drawFastHLine(27, 89, 72, ST7735_WHITE);
 
-void drawSatelliteMap(const int& x, const int& y, const int& r) {
-  tft.drawCircle(x, y, r, ST7735_WHITE);
-  tft.drawCircle(x, y, round(r/2), ST7735_WHITE);
-  tft.drawFastVLine(x, y - r, r*2, ST7735_WHITE);
-  tft.drawFastHLine(x - r, y, r*2, ST7735_WHITE);
+/**
+ * Draw a circular map that represents the plane upon which satellites can
+ * be projected in a top-down 2D view.
+ */
+void drawSatelliteMap() {
+  // clear the map
+  tft.fillRect(SATX - SATR, SATY - SATR, SATX + SATR, SATY + SATR, ST7735_BLACK); 
+  // Draw outer ring
+  tft.drawCircle(SATX, SATY, SATR, ST7735_WHITE);
+  tft.drawCircle(SATX, SATY, round(SATR/2), ST7735_WHITE);
+  // Draw inner ring
+  tft.drawFastVLine(SATX, SATY - SATR, SATR*2, ST7735_WHITE);
+  tft.drawFastHLine(SATX - SATR, SATY, SATR*2, ST7735_WHITE);
 
 }
 
+/**
+ * Display satellites on the satellite map according to where they appear on a 
+ * 2D plan.
+ * The current heading is taken into account.
+ */
 void displaySatellite(const double& elevation, const double& azimuth) {
   int x, ex, ey;
   // The distance from the center to the satellite.
-  x = round(cos(elevation * PI / 180) * SATR);
-  
+  x = round(cos(elevation * PI / 180) * SATR);  
+
   // The X and Y coordinates of the satellite on the map.
-  ex = round(sin(azimuth * PI / 180) * x);
-  ey = round(cos(azimuth * PI / 180) * x);
+  ex = round(sin((azimuth - (double)headingDegrees) * PI / 180) * x);
+  ey = round(cos((azimuth - (double)headingDegrees) * PI / 180) * x);
 
    // Draw demo satellites
-  tft.fillCircle(63 + ex, 89 - ey, 3, ST7735_GREEN);
- 
+  tft.fillCircle(SATX + ex, SATY - ey, 3, ST7735_GREEN);
+
 }
 
 void receiveData(int byteCount) {
