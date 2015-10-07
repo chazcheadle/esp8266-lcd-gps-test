@@ -22,6 +22,12 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_HMC5883_U.h>
 
+#define RADIUS 36
+
+#define SATX 63
+#define SATY 89
+#define SATR 36
+
 // The TinyGPS++ object
 TinyGPSPlus gps;
 
@@ -153,14 +159,16 @@ void loop() {
       tft.print(' ');
   }
   // Draw Satellite map
-  tft.drawCircle(63, 89, 36, ST7735_WHITE);
-  tft.drawCircle(63, 89, 18, ST7735_WHITE);
-  tft.drawFastVLine(63, 53, 72, ST7735_WHITE);
-  tft.drawFastHLine(27, 89, 72, ST7735_WHITE);
+  drawSatelliteMap(SATX, SATY, SATR);
 
-  // Draw demo satellites
-  tft.fillCircle(54, 80, 3, ST7735_GREEN);
-  tft.fillCircle(74, 74, 3, ST7735_YELLOW);
+  // Demo satellites.
+  // TODO: Feed actual $GPGSV data.
+  //       Possibly color code satellite based on SNR.
+  // displaySatellite(
+  displaySatellite(60.0, 45);
+  displaySatellite(20.0, 110);
+  displaySatellite(45.0, 315);
+
   smartDelay(1000);
 }
 
@@ -252,8 +260,34 @@ static char printStr(const char *str, int len)
     Serial.print(i<slen ? str[i] : ' ');
   smartDelay(0);
 }
+//  tft.drawCircle(63, 89, 36, ST7735_WHITE);
+//  tft.drawCircle(63, 89, 18, ST7735_WHITE);
+//  tft.drawFastVLine(63, 53, 72, ST7735_WHITE);
+//  tft.drawFastHLine(27, 89, 72, ST7735_WHITE);
 
-  void receiveData(int byteCount) {
+void drawSatelliteMap(const int& x, const int& y, const int& r) {
+  tft.drawCircle(x, y, r, ST7735_WHITE);
+  tft.drawCircle(x, y, round(r/2), ST7735_WHITE);
+  tft.drawFastVLine(x, y - r, r*2, ST7735_WHITE);
+  tft.drawFastHLine(x - r, y, r*2, ST7735_WHITE);
+
+}
+
+void displaySatellite(const double& elevation, const double& azimuth) {
+  int x, ex, ey;
+  // The distance from the center to the satellite.
+  x = round(cos(elevation * PI / 180) * SATR);
+  
+  // The X and Y coordinates of the satellite on the map.
+  ex = round(sin(azimuth * PI / 180) * x);
+  ey = round(cos(azimuth * PI / 180) * x);
+
+   // Draw demo satellites
+  tft.fillCircle(63 + ex, 89 - ey, 3, ST7735_GREEN);
+ 
+}
+
+void receiveData(int byteCount) {
 }
 
 void sendData() {
