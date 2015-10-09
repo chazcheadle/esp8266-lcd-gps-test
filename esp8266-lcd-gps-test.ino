@@ -70,7 +70,7 @@ void setup() {
 
   // large block of text
   tft.fillScreen(ST7735_BLACK);
-  tft.setRotation(2); 
+  tft.setRotation(3);
 
   // Start mag sensoring
   if(!mag.begin())
@@ -162,6 +162,9 @@ void loop() {
   // Draw Satellite map
   drawSatelliteMap();
 
+  // Draw compass needle.
+  displayCompassNeedle();
+
   // Demo satellites.
   // TODO: Feed actual $GPGSV data.
   //       Possibly color code satellite based on SNR.
@@ -178,7 +181,6 @@ void testdrawtext(const char *text, uint16_t color) {
   tft.setTextWrap(true);
   tft.print(text);
 }
-
 
 static void smartDelay(unsigned long ms)
 {
@@ -272,11 +274,22 @@ void drawSatelliteMap() {
   tft.fillRect(SATX - SATR, SATY - SATR, SATX + SATR, SATY + SATR, ST7735_BLACK); 
   // Draw outer ring
   tft.drawCircle(SATX, SATY, SATR, ST7735_WHITE);
-  tft.drawCircle(SATX, SATY, round(SATR/2), ST7735_WHITE);
   // Draw inner ring
-  tft.drawFastVLine(SATX, SATY - SATR, SATR*2, ST7735_WHITE);
-  tft.drawFastHLine(SATX - SATR, SATY, SATR*2, ST7735_WHITE);
+  tft.drawCircle(SATX, SATY, round(SATR/2), ST7735_DARKGREY);
+  // Draw crosshairs
+  tft.drawFastVLine(SATX, SATY - SATR, SATR*2, ST7735_DARKGREY);
+  tft.drawFastHLine(SATX - SATR, SATY, SATR*2, ST7735_DARKGREY);
+}
 
+/**
+ * Display compass needle.
+ */
+void displayCompassNeedle() {
+  int nx, ny;
+  // The X and Y coordinates of the tip of the compass needle.
+  nx = round(sin((double)headingDegrees * PI / 180) * SATR);
+  ny = round(cos((double)headingDegrees * PI / 180) * SATR);
+  tft.drawLine(SATX, SATY, SATX - nx, SATY - ny, ST7735_RED);
 }
 
 /**
@@ -294,7 +307,7 @@ void displaySatellite(const double& elevation, const double& azimuth) {
   ey = round(cos((azimuth - (double)headingDegrees) * PI / 180) * x);
 
    // Draw demo satellites
-  tft.fillCircle(SATX + ex, SATY - ey, 3, ST7735_GREEN);
+  tft.fillCircle(SATX + ex, SATY - ey, 2, ST7735_GREEN);
 
 }
 
